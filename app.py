@@ -977,11 +977,8 @@ with tab3:
                     textfont=dict(size=10, color='white'),
                     hovertemplate='<b>%{y}</b> → %{x}<br>Кол-во: %{z:,.0f}<extra></extra>'
                 ))
-                fig_heatmap.update_layout(
-                    **PLOTLY_LAYOUT,
-                    height=450,
-                    xaxis=dict(tickangle=45, **PLOTLY_LAYOUT['xaxis']),
-                )
+                fig_heatmap.update_layout(**PLOTLY_LAYOUT, height=450)
+                fig_heatmap.update_xaxes(tickangle=45)
                 st.plotly_chart(fig_heatmap, width='stretch')
 
     else:
@@ -1049,11 +1046,8 @@ with tab4:
                 barmode='stack',
                 labels={'count': 'Заказы', 'payment_status': 'Оплата', 'country': 'Страна'}
             )
-            fig_pay_country.update_layout(
-                **PLOTLY_LAYOUT,
-                height=400,
-                xaxis=dict(tickangle=45, **PLOTLY_LAYOUT['xaxis']),
-            )
+            fig_pay_country.update_layout(**PLOTLY_LAYOUT, height=400)
+            fig_pay_country.update_xaxes(tickangle=45)
             fig_pay_country.update_traces(marker=dict(cornerradius=4))
             st.plotly_chart(fig_pay_country, width='stretch')
 
