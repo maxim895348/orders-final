@@ -227,13 +227,60 @@ PAYMENT_COLORS = {
 
 
 # ──────────────────────────────────────────────
+# FILE UPLOAD / AUTO-DETECT
+# ──────────────────────────────────────────────
+import os, io
+
+# Try to auto-detect local file first
+LOCAL_FILE = 'ORDERS.xlsx'
+file_source = None
+
+if os.path.exists(LOCAL_FILE):
+    file_source = LOCAL_FILE
+elif 'uploaded_file' in st.session_state and st.session_state.uploaded_file is not None:
+    file_source = st.session_state.uploaded_file
+
+if file_source is None:
+    # Show upload screen
+    st.markdown("""
+    <div style="text-align:center; padding: 60px 20px;">
+        <h1 style="font-size:2.4rem; font-weight:800; margin:0;
+            background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #e879f9 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+            📊 Sales Analytics Dashboard
+        </h1>
+        <p style="color:#94a3b8; font-size:1.1rem; margin-top:12px;">
+            Загрузите файл <b style="color:#c7d2fe;">ORDERS.xlsx</b> для начала работы
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col_u1, col_u2, col_u3 = st.columns([1, 2, 1])
+    with col_u2:
+        uploaded = st.file_uploader(
+            "Перетащите файл сюда или нажмите Browse",
+            type=['xlsx', 'xls'],
+            key='file_upload_widget',
+            help="Поддерживается формат Excel (.xlsx)"
+        )
+        if uploaded is not None:
+            st.session_state.uploaded_file = uploaded
+            st.rerun()
+
+    st.stop()
+
+
+# ──────────────────────────────────────────────
 # DATA LOADING
 # ──────────────────────────────────────────────
 @st.cache_data(ttl=3600)
-def load_data():
+def load_data(_file_source):
     """Load and clean all relevant sheets from ORDERS.xlsx."""
 
-    xls = pd.ExcelFile('ORDERS.xlsx', engine='openpyxl')
+    if isinstance(_file_source, str):
+        xls = pd.ExcelFile(_file_source, engine='openpyxl')
+    else:
+        xls = pd.ExcelFile(io.BytesIO(_file_source.getvalue()), engine='openpyxl')
 
     # ── S&OP Meeting ──
     df_sop = pd.read_excel(xls, sheet_name='S&OP Meeting WK19 2025', header=2)
@@ -405,7 +452,7 @@ def load_data():
 # LOAD DATA
 # ──────────────────────────────────────────────
 try:
-    df_sop, df_orders, df_opo, df_packing = load_data()
+    df_sop, df_orders, df_opo, df_packing = load_data(file_source)
     data_loaded = True
 except Exception as e:
     st.error(f"❌ Ошибка загрузки данных: {e}")
