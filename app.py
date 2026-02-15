@@ -664,7 +664,7 @@ with tab1:
                 barmode='group',
                 hovermode='x unified'
             )
-            st.plotly_chart(fig_monthly, use_container_width=True)
+            st.plotly_chart(fig_monthly, width='stretch')
 
     with col_right:
         st.markdown("### 📊 Статус заказов")
@@ -693,7 +693,7 @@ with tab1:
                     showarrow=False
                 )]
             )
-            st.plotly_chart(fig_status, use_container_width=True)
+            st.plotly_chart(fig_status, width='stretch')
 
     # Second row — Top customers
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
@@ -726,7 +726,7 @@ with tab1:
             yaxis_title=None,
             xaxis_title="Паллеты",
         )
-        st.plotly_chart(fig_cust, use_container_width=True)
+        st.plotly_chart(fig_cust, width='stretch')
 
 
 # ──────────────────────────────────────────────
@@ -765,12 +765,11 @@ with tab2:
                 projection_type='natural earth'
             ),
             coloraxis_colorbar=dict(
-                title="Паллеты",
+                title=dict(text="Паллеты", font=dict(color='#c7d2fe')),
                 tickfont=dict(color='#94a3b8'),
-                titlefont=dict(color='#c7d2fe')
             )
         )
-        st.plotly_chart(fig_map, use_container_width=True)
+        st.plotly_chart(fig_map, width='stretch')
 
         # Top countries chart
         col_a, col_b = st.columns(2)
@@ -793,7 +792,7 @@ with tab2:
                 hovertemplate='<b>%{y}</b><br>Заказов: %{x}<extra></extra>'
             ))
             fig_geo_bar.update_layout(**PLOTLY_LAYOUT, height=550, xaxis_title="Заказы")
-            st.plotly_chart(fig_geo_bar, use_container_width=True)
+            st.plotly_chart(fig_geo_bar, width='stretch')
 
         with col_b:
             st.markdown("### 📐 Топ-20 стран по объёму (паллеты)")
@@ -813,7 +812,7 @@ with tab2:
                 hovertemplate='<b>%{y}</b><br>Паллет: %{x:.1f}<extra></extra>'
             ))
             fig_geo_vol.update_layout(**PLOTLY_LAYOUT, height=550, xaxis_title="Паллеты")
-            st.plotly_chart(fig_geo_vol, use_container_width=True)
+            st.plotly_chart(fig_geo_vol, width='stretch')
 
         # Regional breakdown
         st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
@@ -869,7 +868,7 @@ with tab2:
             hovertemplate='<b>%{label}</b><br>Заказов: %{value}<br>Доля: %{percent}<extra></extra>'
         )])
         fig_region.update_layout(**PLOTLY_LAYOUT, height=400, showlegend=True)
-        st.plotly_chart(fig_region, use_container_width=True)
+        st.plotly_chart(fig_region, width='stretch')
 
 
 # ──────────────────────────────────────────────
@@ -904,7 +903,7 @@ with tab3:
                 hovertemplate='<b>%{y}</b><br>Кол-во: %{x:,.0f}<extra></extra>'
             ))
             fig_prod.update_layout(**PLOTLY_LAYOUT, height=700, xaxis_title="Количество (шт.)")
-            st.plotly_chart(fig_prod, use_container_width=True)
+            st.plotly_chart(fig_prod, width='stretch')
 
         with col_p2:
             st.markdown("#### 📋 Топ-25 продуктов по числу заказов")
@@ -928,7 +927,7 @@ with tab3:
                 hovertemplate='<b>%{y}</b><br>Заказов: %{x}<extra></extra>'
             ))
             fig_prod_orders.update_layout(**PLOTLY_LAYOUT, height=700, xaxis_title="Кол-во заказов")
-            st.plotly_chart(fig_prod_orders, use_container_width=True)
+            st.plotly_chart(fig_prod_orders, width='stretch')
 
         # Product-Country matrix
         st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
@@ -959,7 +958,7 @@ with tab3:
                 height=450,
                 xaxis=dict(tickangle=45, **PLOTLY_LAYOUT['xaxis']),
             )
-            st.plotly_chart(fig_heatmap, use_container_width=True)
+            st.plotly_chart(fig_heatmap, width='stretch')
 
     else:
         st.info("Нет данных по продуктам для выбранных фильтров.")
@@ -1009,7 +1008,7 @@ with tab4:
                 hovertemplate='<b>%{label}</b><br>Заказов: %{value}<br>Доля: %{percent}<extra></extra>'
             )])
             fig_pay.update_layout(**PLOTLY_LAYOUT, height=400, showlegend=False)
-            st.plotly_chart(fig_pay, use_container_width=True)
+            st.plotly_chart(fig_pay, width='stretch')
 
     with col_pay2:
         st.markdown("#### 🌍 Условия оплаты по странам (топ-15)")
@@ -1032,7 +1031,7 @@ with tab4:
                 xaxis=dict(tickangle=45, **PLOTLY_LAYOUT['xaxis']),
             )
             fig_pay_country.update_traces(marker=dict(cornerradius=4))
-            st.plotly_chart(fig_pay_country, use_container_width=True)
+            st.plotly_chart(fig_pay_country, width='stretch')
 
     # OPO payment with pallets volume
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
@@ -1057,7 +1056,7 @@ with tab4:
             hovertemplate='<b>%{y}</b><br>Паллет: %{x:,.0f}<extra></extra>'
         ))
         fig_pay_vol.update_layout(**PLOTLY_LAYOUT, height=300, xaxis_title="Паллеты")
-        st.plotly_chart(fig_pay_vol, use_container_width=True)
+        st.plotly_chart(fig_pay_vol, width='stretch')
 
     # Detailed table: Orders with payment issues
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
@@ -1071,7 +1070,7 @@ with tab4:
                            if c in debt_orders.columns]
             debt_display = debt_orders[display_cols].sort_values('order_date', ascending=False)
             debt_display.columns = [c.replace('_', ' ').title() for c in debt_display.columns]
-            st.dataframe(debt_display, use_container_width=True, height=300)
+            st.dataframe(debt_display, width='stretch', height=300)
         else:
             st.success("✅ Нет заказов с открытой задолженностью в текущей выборке!")
 
@@ -1098,7 +1097,7 @@ with tab5:
             'supply_status': 'Supply', 'shipment_date': 'Факт. отгрузка'
         }
         display_sop = display_sop.rename(columns=col_labels)
-        st.dataframe(display_sop, use_container_width=True, height=500)
+        st.dataframe(display_sop, width='stretch', height=500)
     else:
         st.info("Нет данных для отображения.")
 
@@ -1116,7 +1115,7 @@ with tab5:
             'order_date': 'Дата'
         }
         display_orders = display_orders.rename(columns=order_labels)
-        st.dataframe(display_orders, use_container_width=True, height=500)
+        st.dataframe(display_orders, width='stretch', height=500)
 
 
 # ──────────────────────────────────────────────
