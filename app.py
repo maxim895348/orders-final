@@ -481,12 +481,15 @@ df_opo_2025 = filter_2025(df_opo)
 # ──────────────────────────────────────────────
 # SIDEBAR
 # ──────────────────────────────────────────────
+# Use OPO as primary source (full 2025 data, S&OP only goes to May)
+df_primary_2025 = df_opo_2025
+
 with st.sidebar:
     st.markdown("## 🎛️ Фильтры")
     st.markdown("---")
 
     # Country filter
-    all_countries = sorted(df_sop_2025['country'].dropna().unique().tolist()) if 'country' in df_sop_2025.columns else []
+    all_countries = sorted(df_primary_2025['country'].dropna().unique().tolist()) if 'country' in df_primary_2025.columns else []
     selected_countries = st.multiselect(
         "🌍 Страны",
         options=all_countries,
@@ -495,7 +498,7 @@ with st.sidebar:
     )
 
     # Status filter
-    all_statuses = sorted(df_sop_2025['status'].dropna().unique().tolist()) if 'status' in df_sop_2025.columns else []
+    all_statuses = sorted(df_primary_2025['status'].dropna().unique().tolist()) if 'status' in df_primary_2025.columns else []
     selected_statuses = st.multiselect(
         "📋 Статус заказа",
         options=all_statuses,
@@ -504,7 +507,7 @@ with st.sidebar:
     )
 
     # Payment filter
-    all_payments = sorted(df_sop_2025['payment_status'].dropna().unique().tolist()) if 'payment_status' in df_sop_2025.columns else []
+    all_payments = sorted(df_primary_2025['payment_status'].dropna().unique().tolist()) if 'payment_status' in df_primary_2025.columns else []
     selected_payments = st.multiselect(
         "💳 Условие оплаты",
         options=all_payments,
@@ -532,7 +535,8 @@ def apply_filters(df):
         filtered = filtered[filtered['payment_status'].isin(selected_payments)]
     return filtered
 
-df_sop_f = apply_filters(df_sop_2025)
+# Primary dataset = OPO (full 2025 year)
+df_sop_f = apply_filters(df_primary_2025)
 
 # For orders, apply country filter
 df_orders_f = df_orders_2025.copy()
@@ -540,6 +544,9 @@ if selected_countries:
     df_orders_f = df_orders_f[df_orders_f['country'].isin(selected_countries)]
 
 df_opo_f = apply_filters(df_opo_2025)
+
+# Keep original S&OP filtered for details tab
+df_sop_orig_f = apply_filters(df_sop_2025)
 
 
 # ──────────────────────────────────────────────
@@ -1100,23 +1107,23 @@ with tab4:
 with tab5:
     st.markdown("### 📋 Детализация заказов 2025")
 
-    # S&OP view
-    st.markdown("#### Основная таблица S&OP")
+    # Main OPO table (full 2025 year)
+    st.markdown("#### Основная таблица заказов (полный 2025)")
     if len(df_sop_f) > 0:
-        display_sop = df_sop_f.copy()
-        sop_cols = [c for c in ['proforma', 'company', 'country', 'pallets', 'status',
-                                'order_date', 'promised_date', 'payment_status',
-                                'supply_status', 'shipment_date']
-                    if c in display_sop.columns]
-        display_sop = display_sop[sop_cols].sort_values('order_date', ascending=False)
+        display_main = df_sop_f.copy()
+        main_cols = [c for c in ['proforma', 'company', 'country', 'pallets', 'status',
+                                'order_date', 'promised_date', 'payment_status']
+                    if c in display_main.columns]
+        display_main = display_main[main_cols]
+        if 'order_date' in main_cols:
+            display_main = display_main.sort_values('order_date', ascending=False)
         col_labels = {
             'proforma': 'Proforma', 'company': 'Компания', 'country': 'Страна',
             'pallets': 'Паллеты', 'status': 'Статус', 'order_date': 'Дата заказа',
-            'promised_date': 'Дата отгрузки', 'payment_status': 'Оплата',
-            'supply_status': 'Supply', 'shipment_date': 'Факт. отгрузка'
+            'promised_date': 'Дата отгрузки', 'payment_status': 'Оплата'
         }
-        display_sop = display_sop.rename(columns=col_labels)
-        st.dataframe(display_sop, width='stretch', height=500)
+        display_main = display_main.rename(columns=col_labels)
+        st.dataframe(display_main, width='stretch', height=500)
     else:
         st.info("Нет данных для отображения.")
 
