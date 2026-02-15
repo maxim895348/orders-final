@@ -208,6 +208,9 @@ COLOR_PALETTE = ['#818cf8', '#a78bfa', '#c084fc', '#34d399', '#38bdf8',
                  '#fb923c', '#f87171', '#fbbf24', '#22d3ee', '#e879f9',
                  '#4ade80', '#f472b6', '#93c5fd', '#86efac', '#fdba74']
 
+# ── EUR estimation: average revenue per pallet ──
+EUR_PER_PALLET = 850  # Estimated average revenue per pallet in EUR
+
 STATUS_COLORS = {
     'FINAL': '#818cf8',
     'COMPLETE': '#34d399',
@@ -580,6 +583,7 @@ st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 # ══════════════════════════════════════════════
 total_orders = len(df_sop_f)
 total_pallets = df_sop_f['pallets'].sum() if 'pallets' in df_sop_f.columns else 0
+total_revenue_eur = total_pallets * EUR_PER_PALLET
 unique_countries = df_sop_f['country'].nunique() if 'country' in df_sop_f.columns else 0
 unique_customers = df_sop_f['company'].nunique() if 'company' in df_sop_f.columns else 0
 
@@ -590,6 +594,16 @@ lc_total = payment_counts.get('LC', 0) + payment_counts.get('LC OPEN', 0)
 payment_due = payment_counts.get('PAYMENT', 0)
 no_payment_info = total_orders - prepaid - lc_total - payment_due
 
+# EUR amounts by payment type (based on pallets)
+def pallets_by_payment(status_list):
+    if 'payment_status' not in df_sop_f.columns or 'pallets' not in df_sop_f.columns:
+        return 0
+    return df_sop_f[df_sop_f['payment_status'].isin(status_list)]['pallets'].sum() * EUR_PER_PALLET
+
+eur_prepaid = pallets_by_payment(['PREPAYMENT'])
+eur_lc = pallets_by_payment(['LC', 'LC OPEN'])
+eur_due = pallets_by_payment(['PAYMENT'])
+
 # Status breakdown
 complete_count = len(df_sop_f[df_sop_f['status'] == 'COMPLETE']) if 'status' in df_sop_f.columns else 0
 final_count = len(df_sop_f[df_sop_f['status'] == 'FINAL']) if 'status' in df_sop_f.columns else 0
@@ -598,17 +612,17 @@ hold_count = len(df_sop_f[df_sop_f['status'].isin(['HOLD', 'HOLD PACK'])]) if 's
 c1, c2, c3, c4, c5, c6 = st.columns(6)
 
 with c1:
-    st.markdown(kpi_card(f"{total_orders}", "Всего заказов", f"📦 FY 2025", 'neutral', ''), unsafe_allow_html=True)
+    st.markdown(kpi_card(f"€{total_revenue_eur:,.0f}", "Выручка (est.)", f"📦 {total_orders} заказов", 'neutral', ''), unsafe_allow_html=True)
 with c2:
-    st.markdown(kpi_card(f"{total_pallets:,.0f}", "Паллет (объём)", f"📐 Volume proxy", 'neutral', 'blue'), unsafe_allow_html=True)
+    st.markdown(kpi_card(f"{total_pallets:,.0f}", "Паллет (объём)", f"≈ €{EUR_PER_PALLET}/пал.", 'neutral', 'blue'), unsafe_allow_html=True)
 with c3:
     st.markdown(kpi_card(f"{unique_countries}", "Стран", f"🌍 География", 'neutral', 'cyan'), unsafe_allow_html=True)
 with c4:
-    st.markdown(kpi_card(f"{prepaid}", "Предоплата", f"✅ Оплачено", 'positive', 'green'), unsafe_allow_html=True)
+    st.markdown(kpi_card(f"€{eur_prepaid:,.0f}", "Оплачено", f"✅ {prepaid} заказов", 'positive', 'green'), unsafe_allow_html=True)
 with c5:
-    st.markdown(kpi_card(f"{lc_total}", "Аккредитив (LC)", f"🏦 Letter of Credit", 'neutral', 'orange'), unsafe_allow_html=True)
+    st.markdown(kpi_card(f"€{eur_lc:,.0f}", "Аккредитив (LC)", f"🏦 {lc_total} заказов", 'neutral', 'orange'), unsafe_allow_html=True)
 with c6:
-    st.markdown(kpi_card(f"{payment_due}", "Ожидает оплату", f"⚠️ Payment due", 'negative', 'red'), unsafe_allow_html=True)
+    st.markdown(kpi_card(f"€{eur_due:,.0f}", "Ожидает оплату", f"⚠️ {payment_due} заказов", 'negative', 'red'), unsafe_allow_html=True)
 
 st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
 
@@ -740,6 +754,7 @@ with tab2:
             orders=('country', 'count'),
             pallets=('pallets', 'sum')
         ).reset_index().sort_values('pallets', ascending=False)
+        geo_data['eur'] = geo_data['pallets'] * EUR_PER_PALLET
 
         # World map
         fig_map = px.choropleth(
@@ -877,11 +892,19 @@ with tab2:
 with tab3:
     st.markdown("### 📦 Анализ продуктов (2025)")
 
-    if len(df_orders_f) > 0 and 'product' in df_orders_f.columns:
-        # Top products by quantity
-        prod_data = df_orders_f.groupby('product').agg(
-            total_qty=('quantity', 'sum'),
-            order_count=('order_number', 'nunique')
+    has_product = len(df_orders_f) > 0 and 'product' in df_orders_f.columns
+    qty_col = 'quantity' if has_product and 'quantity' in df_orders_f.columns else None
+    order_col = 'order_number' if has_product and 'order_number' in df_orders_f.columns else None
+
+    if has_product and qty_col:
+        # Top products by quantity — safe agg
+        agg_dict = {'total_qty': (qty_col, 'sum')}
+        if order_col:
+            agg_dict['order_count'] = (order_col, 'nunique')
+        else:
+            agg_dict['order_count'] = (qty_col, 'count')
+
+        prod_data = df_orders_f.groupby('product').agg(**agg_dict
         ).sort_values('total_qty', ascending=False).head(25).reset_index()
 
         col_p1, col_p2 = st.columns(2)
@@ -907,9 +930,9 @@ with tab3:
 
         with col_p2:
             st.markdown("#### 📋 Топ-25 продуктов по числу заказов")
-            prod_by_orders = df_orders_f.groupby('product').agg(
-                order_count=('order_number', 'nunique'),
-                total_qty=('quantity', 'sum')
+            agg_dict2 = {'order_count': (order_col, 'nunique') if order_col else (qty_col, 'count'),
+                         'total_qty': (qty_col, 'sum')}
+            prod_by_orders = df_orders_f.groupby('product').agg(**agg_dict2
             ).sort_values('order_count', ascending=False).head(25).reset_index()
 
             fig_prod_orders = go.Figure(go.Bar(
@@ -933,32 +956,33 @@ with tab3:
         st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
         st.markdown("### 🗂️ Матрица: Продукт × Страна (топ-10 × топ-10)")
 
-        top10_products = df_orders_f.groupby('product')['quantity'].sum().nlargest(10).index.tolist()
-        top10_countries = df_orders_f.groupby('country')['quantity'].sum().nlargest(10).index.tolist()
+        if 'country' in df_orders_f.columns:
+            top10_products = df_orders_f.groupby('product')[qty_col].sum().nlargest(10).index.tolist()
+            top10_countries = df_orders_f.groupby('country')[qty_col].sum().nlargest(10).index.tolist()
 
-        matrix_data = df_orders_f[
-            df_orders_f['product'].isin(top10_products) &
-            df_orders_f['country'].isin(top10_countries)
-        ].groupby(['product', 'country'])['quantity'].sum().unstack(fill_value=0)
+            matrix_data = df_orders_f[
+                df_orders_f['product'].isin(top10_products) &
+                df_orders_f['country'].isin(top10_countries)
+            ].groupby(['product', 'country'])[qty_col].sum().unstack(fill_value=0)
 
-        if len(matrix_data) > 0:
-            fig_heatmap = go.Figure(data=go.Heatmap(
-                z=matrix_data.values,
-                x=matrix_data.columns.tolist(),
-                y=matrix_data.index.tolist(),
-                colorscale=[[0, '#0f0f23'], [0.25, '#312e81'], [0.5, '#4f46e5'],
-                            [0.75, '#818cf8'], [1, '#c084fc']],
-                text=[[f"{v:,.0f}" if v > 0 else "" for v in row] for row in matrix_data.values],
-                texttemplate="%{text}",
-                textfont=dict(size=10, color='white'),
-                hovertemplate='<b>%{y}</b> → %{x}<br>Кол-во: %{z:,.0f}<extra></extra>'
-            ))
-            fig_heatmap.update_layout(
-                **PLOTLY_LAYOUT,
-                height=450,
-                xaxis=dict(tickangle=45, **PLOTLY_LAYOUT['xaxis']),
-            )
-            st.plotly_chart(fig_heatmap, width='stretch')
+            if len(matrix_data) > 0:
+                fig_heatmap = go.Figure(data=go.Heatmap(
+                    z=matrix_data.values,
+                    x=matrix_data.columns.tolist(),
+                    y=matrix_data.index.tolist(),
+                    colorscale=[[0, '#0f0f23'], [0.25, '#312e81'], [0.5, '#4f46e5'],
+                                [0.75, '#818cf8'], [1, '#c084fc']],
+                    text=[[f"{v:,.0f}" if v > 0 else "" for v in row] for row in matrix_data.values],
+                    texttemplate="%{text}",
+                    textfont=dict(size=10, color='white'),
+                    hovertemplate='<b>%{y}</b> → %{x}<br>Кол-во: %{z:,.0f}<extra></extra>'
+                ))
+                fig_heatmap.update_layout(
+                    **PLOTLY_LAYOUT,
+                    height=450,
+                    xaxis=dict(tickangle=45, **PLOTLY_LAYOUT['xaxis']),
+                )
+                st.plotly_chart(fig_heatmap, width='stretch')
 
     else:
         st.info("Нет данных по продуктам для выбранных фильтров.")
@@ -1035,27 +1059,28 @@ with tab4:
 
     # OPO payment with pallets volume
     st.markdown('<hr class="section-divider">', unsafe_allow_html=True)
-    st.markdown("#### 📐 Объём (паллеты) по условиям оплаты")
+    st.markdown("#### 📐 Объём (паллеты) и выручка по условиям оплаты")
 
     if 'payment_status' in df_sop_f.columns and 'pallets' in df_sop_f.columns:
         pay_vol = df_sop_f.groupby(df_sop_f['payment_status'].fillna('Не указано')).agg(
             total_pallets=('pallets', 'sum'),
             orders=('pallets', 'count')
         ).sort_values('total_pallets', ascending=True).reset_index()
+        pay_vol['eur'] = pay_vol['total_pallets'] * EUR_PER_PALLET
 
         pay_vol_colors = [PAYMENT_COLORS.get(p, '#64748b') for p in pay_vol['payment_status']]
 
         fig_pay_vol = go.Figure(go.Bar(
             y=pay_vol['payment_status'],
-            x=pay_vol['total_pallets'],
+            x=pay_vol['eur'],
             orientation='h',
             marker=dict(color=pay_vol_colors, cornerradius=6),
-            text=[f"{v:,.0f} пал. ({n} зак.)" for v, n in zip(pay_vol['total_pallets'], pay_vol['orders'])],
+            text=[f"€{e:,.0f} · {v:,.0f} пал. ({n} зак.)" for e, v, n in zip(pay_vol['eur'], pay_vol['total_pallets'], pay_vol['orders'])],
             textposition='auto',
             textfont=dict(color='white', size=12),
-            hovertemplate='<b>%{y}</b><br>Паллет: %{x:,.0f}<extra></extra>'
+            hovertemplate='<b>%{y}</b><br>Выручка: €%{x:,.0f}<extra></extra>'
         ))
-        fig_pay_vol.update_layout(**PLOTLY_LAYOUT, height=300, xaxis_title="Паллеты")
+        fig_pay_vol.update_layout(**PLOTLY_LAYOUT, height=300, xaxis_title="Выручка (EUR)")
         st.plotly_chart(fig_pay_vol, width='stretch')
 
     # Detailed table: Orders with payment issues
