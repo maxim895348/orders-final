@@ -1127,7 +1127,9 @@ with tab5:
         order_cols = [c for c in ['order_number', 'customer_code', 'country',
                                   'product', 'quantity', 'origin', 'order_date']
                       if c in df_orders_f.columns]
-        display_orders = df_orders_f[order_cols].sort_values('order_date', ascending=False)
+        display_orders = df_orders_f[order_cols]
+        if 'order_date' in order_cols:
+            display_orders = display_orders.sort_values('order_date', ascending=False)
         order_labels = {
             'order_number': '№ Заказа', 'customer_code': 'Клиент', 'country': 'Страна',
             'product': 'Продукт', 'quantity': 'Кол-во', 'origin': 'Производство',
