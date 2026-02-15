@@ -357,7 +357,7 @@ def load_data(_file_source):
             col_map_orders[c] = 'country'
         elif cl == 'status':
             col_map_orders[c] = 'order_status'
-        elif 'order entry' in cl:
+        elif 'order entry date' in cl:
             col_map_orders[c] = 'order_date'
         elif cl == 'transport':
             col_map_orders[c] = 'transport'
@@ -368,6 +368,8 @@ def load_data(_file_source):
     df_orders_raw = df_orders_raw.rename(columns=col_map_orders)
 
     # Build clean orders by processing parent-child structure
+    # Header row: has Country, no Semi-finished product
+    # Detail row: has Semi-finished product and numeric Quantity
     orders_list = []
     current_header = {}
 
@@ -376,13 +378,17 @@ def load_data(_file_source):
         qty = row.get('quantity')
         product = row.get('product_description')
         country = row.get('country')
+        semi = row.get('semi_finished')
 
         if pd.isna(order_num):
             continue
 
-        # Check if this is a header row (has country) or a detail row (has product)
-        if pd.notna(country) and (pd.isna(product) or product == country):
-            # Header row
+        # Header row: has Country and no Semi-finished product
+        is_header = pd.notna(country) and pd.isna(semi)
+        # Detail row: has Semi-finished product (always present in product lines)
+        is_detail = pd.notna(semi)
+
+        if is_header:
             current_header = {
                 'order_number': int(order_num) if isinstance(order_num, float) else order_num,
                 'customer_code': row.get('customer_code'),
@@ -391,16 +397,14 @@ def load_data(_file_source):
                 'pallets': pd.to_numeric(row.get('pallets'), errors='coerce'),
                 'transport': row.get('transport'),
                 'order_status': row.get('order_status'),
-                'product_description': row.get('product_description'),
             }
-        elif pd.notna(product) and str(product) not in ['None', '']:
-            # Detail row
+        elif is_detail and pd.notna(product) and str(product).strip():
             detail = {
                 **current_header,
                 'quantity': pd.to_numeric(qty, errors='coerce'),
                 'product': str(product).strip(),
                 'finished_product': row.get('finished_product'),
-                'semi_finished': row.get('semi_finished'),
+                'semi_finished': semi,
                 'origin': row.get('origin'),
             }
             orders_list.append(detail)
